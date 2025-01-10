@@ -1,17 +1,56 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useChat } from "../hooks/useChat";
 
 export const UI = ({ hidden, ...props }) => {
   const input = useRef();
+  const [recognizing, setRecognizing] = useState(false);
   const { chat, loading, cameraZoomed, setCameraZoomed, message } = useChat();
 
-  const sendMessage = () => {
-    const text = input.current.value;
+  const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.lang = "en-US";
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  const speechSynthesis = window.speechSynthesis;
+
+  const sendMessage = (text) => {
     if (!loading && !message) {
       chat(text);
-      input.current.value = "";
+      if (input.current) input.current.value = "";
     }
   };
+
+  const handleVoiceInput = () => {
+    if (recognizing) {
+      recognition.stop();
+      setRecognizing(false);
+    } else {
+      recognition.start();
+      setRecognizing(true);
+    }
+
+    recognition.onresult = (event) => {
+      const text = event.results[0][0].transcript;
+      sendMessage(text);
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Voice recognition error:", event);
+      setRecognizing(false);
+    };
+
+    recognition.onend = () => {
+      setRecognizing(false);
+    };
+  };
+
+  const speakMessage = (text) => {
+    if (!speechSynthesis) return;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "en-US";
+    speechSynthesis.speak(utterance);
+  };
+
   if (hidden) {
     return null;
   }
@@ -93,18 +132,24 @@ export const UI = ({ hidden, ...props }) => {
             ref={input}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                sendMessage();
+                sendMessage(input.current.value);
               }
             }}
           />
           <button
             disabled={loading || message}
-            onClick={sendMessage}
+            onClick={() => sendMessage(input.current.value)}
             className={`bg-pink-500 hover:bg-pink-600 text-white p-4 px-10 font-semibold uppercase rounded-md ${
               loading || message ? "cursor-not-allowed opacity-30" : ""
             }`}
           >
             Send
+          </button>
+          <button
+            onClick={handleVoiceInput}
+            className="pointer-events-auto bg-pink-500 hover:bg-pink-600 text-white p-4 rounded-md"
+          >
+            🎤 {recognizing ? "Listening..." : "Voice"}
           </button>
         </div>
       </div>
