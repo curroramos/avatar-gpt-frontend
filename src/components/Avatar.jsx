@@ -373,6 +373,6 @@ export function Avatar(props) {
     </group>
   );
 }
-
-useGLTF.preload("/models/64f1a714fe61576b46f27ca2.glb");
+// TODO change models
+useGLTF.preload("/models/avatar.glb");
 useGLTF.preload("/models/animations.glb");
